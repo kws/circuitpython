@@ -174,13 +174,32 @@ void common_hal_wifi_radio_start_ap(wifi_radio_obj_t *self, uint8_t *ssid, size_
         mp_raise_RuntimeError(translate("Wifi is in station mode."));
     }
 
+    int authmode = 0;
+    switch (authmodes) {
+        case AUTHMODE_OPEN:
+            authmode = CYW43_AUTH_OPEN;
+            break;
+        case AUTHMODE_WPA | AUTHMODE_PSK:
+            authmode = CYW43_AUTH_WPA_TKIP_PSK;
+            break;
+        case AUTHMODE_WPA2 | AUTHMODE_PSK:
+            authmode = CYW43_AUTH_WPA2_AES_PSK;
+            break;
+        case AUTHMODE_WPA | AUTHMODE_WPA2 | AUTHMODE_PSK:
+            authmode = CYW43_AUTH_WPA2_MIXED_PSK;
+            break;
+        default:
+            mp_arg_error_invalid(MP_QSTR_authmode);
+            break;
+    }
+
     common_hal_wifi_radio_stop_ap(self);
 
     // Channel can only be changed after initial powerup and config of ap.
     // Defaults to 1 if not set or invalid (i.e. 13)
     cyw43_wifi_ap_set_channel(&cyw43_state, (const uint32_t)channel);
 
-    cyw43_arch_enable_ap_mode((const char *)ssid, (const char *)password, CYW43_AUTH_WPA2_AES_PSK);
+    cyw43_arch_enable_ap_mode((const char *)ssid, (const char *)password, authmode);
 
     // TODO: Implement authmode check like in espressif
     bindings_cyw43_wifi_enforce_pm();
